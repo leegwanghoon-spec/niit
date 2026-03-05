@@ -11,16 +11,17 @@
         .row { display: flex; flex-direction: column; padding: 15px 0; border-bottom: 0.5px solid #eee; }
         .info-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .name { font-weight: 700; font-size: 15px; }
-        .stock-label { font-size: 13px; color: #007aff; font-weight: 600; background: #eef7ff; padding: 4px 10px; border-radius: 8px; cursor: pointer; border: 1px solid #cce5ff; }
+        .stock-label { font-size: 13px; color: #007aff; font-weight: 600; background: #eef7ff; padding: 6px 10px; border-radius: 8px; cursor: pointer; border: 1px solid #cce5ff; }
         .controls { display: flex; justify-content: space-between; align-items: center; }
-        .count-display { font-size: 18px; font-weight: 800; color: #000; cursor: pointer; background: #f8f8f8; padding: 4px 10px; border-radius: 8px; border: 1px dashed #ccc; }
-        .btn-group { display: flex; gap: 10px; }
-        .btn { width: 45px; height: 45px; border-radius: 12px; border: none; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .count-display { font-size: 16px; font-weight: 800; color: #000; cursor: pointer; background: #fdfdfd; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; display: flex; flex-direction: column; align-items: center; }
+        .count-val { font-size: 20px; color: #ff3b30; }
+        .unit-label { font-size: 11px; font-weight: 500; color: #8e8e93; margin-top: 2px; }
+        .btn-group { display: flex; gap: 8px; }
+        .btn { width: 48px; height: 48px; border-radius: 12px; border: none; font-size: 22px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .minus { background: #e5e5ea; color: #3a3a3c; }
         .plus { background: #000; color: #fff; }
-        .reset-btn { width: 100%; background: #ff3b30; color: white; border: none; border-radius: 12px; height: 50px; margin-top: 10px; font-size: 14px; font-weight: bold; }
+        .reset-btn { width: 100%; background: #8e8e93; color: white; border: none; border-radius: 12px; height: 45px; margin-top: 10px; font-size: 13px; font-weight: bold; opacity: 0.8; }
         .done { opacity: 0.3; }
-        .unit { font-size: 12px; font-weight: 400; color: #8e8e93; margin-left: 2px; }
     </style>
 </head>
 <body>
@@ -39,11 +40,11 @@
 
         function getValue(id, suffix, defaultValue) {
             const val = localStorage.getItem(id + suffix);
-            return val === null ? defaultValue : parseInt(val);
+            return val === null ? defaultValue : parseInt(val, 10);
         }
 
         function render() {
-            let html = '<div class="card"><h2>🤍 화이트 관리</h2>';
+            let html = '<div class="card"><h2>🤍 화이트 라인</h2>';
             initialData.forEach((item, i) => {
                 const currentProd = getValue(item.id, '_prod', item.target);
                 const currentStock = getValue(item.id, '_stock', item.baseStock);
@@ -53,25 +54,26 @@
                 <div class="row ${isDone ? 'done' : ''}">
                     <div class="info-line">
                         <div class="name">${item.label}</div>
-                        <div class="stock-label" onclick="editValue('${item.id}', '_stock', '${item.label} 재고')">📦 재고: ${currentStock}개</div>
+                        <div class="stock-label" onclick="manualEdit('${item.id}', '_stock', '${item.label} 재고')">📦 재고: ${currentStock}개</div>
                     </div>
                     <div class="controls">
-                        <div class="count-display" onclick="editValue('${item.id}', '_prod', '${item.label} 생산남음')">
-                            ${currentProd}<span class="unit">개 남음 (수정)</span>
+                        <div class="count-display" onclick="manualEdit('${item.id}', '_prod', '${item.label} 목표 생산수량')">
+                            <span class="count-val">${currentProd}</span>
+                            <span class="unit-label">목표 생산수량</span>
                         </div>
                         <div class="btn-group">
-                            <button class="btn minus" onclick="update('${item.id}', -1)">-</button>
-                            <button class="btn plus" onclick="update('${item.id}', 1)">+</button>
+                            <button class="btn minus" onclick="updateCount('${item.id}', -1)">-</button>
+                            <button class="btn plus" onclick="updateCount('${item.id}', 1)">+</button>
                         </div>
                     </div>
                 </div>`;
-                if (i === 3) html += '</div><div class="card"><h2>🖤 블랙 관리</h2>';
+                if (i === 3) html += '</div><div class="card"><h2>🖤 블랙 라인</h2>';
             });
-            html += '<button class="reset-btn" onclick="resetData()">전체 데이터 초기화</button></div>';
+            html += '<button class="reset-btn" onclick="resetAll()">⚠️ 전체 데이터 초기화</button></div>';
             document.getElementById('app').innerHTML = html;
         }
 
-        function update(id, delta) {
+        function updateCount(id, delta) {
             const item = initialData.find(d => d.id === id);
             let currentProd = getValue(id, '_prod', item.target);
             let currentStock = getValue(id, '_stock', item.baseStock);
@@ -86,17 +88,19 @@
             render();
         }
 
-        function editValue(id, suffix, title) {
+        function manualEdit(id, suffix, title) {
             const currentVal = getValue(id, suffix, 0);
-            const newVal = prompt(`[${title}] 수량을 입력하세요:`, currentVal);
-            if (newVal !== null && !isNaN(newVal)) {
-                localStorage.setItem(id + suffix, parseInt(newVal));
+            const input = prompt(`[${title}] 수량을 입력하세요:`, currentVal);
+            
+            // 입력값이 있고, 공백이 아니며, 숫자인 경우에만 저장
+            if (input !== null && input.trim() !== "" && !isNaN(input)) {
+                localStorage.setItem(id + suffix, parseInt(input.trim(), 10));
                 render();
             }
         }
 
-        function resetData() {
-            if (confirm('모든 데이터를 초기 목표치와 재고로 되돌릴까요?')) {
+        function resetAll() {
+            if (confirm('주의: 모든 생산 목표와 재고 데이터가 초기화됩니다. 계속하시겠습니까?')) {
                 localStorage.clear();
                 location.reload();
             }
