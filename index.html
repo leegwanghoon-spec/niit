@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>niit 생산 및 재고 관리</title>
+    <title>niit 생산/재고 관리</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; padding: 20px; margin: 0; -webkit-user-select: none; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -11,21 +11,21 @@
         .row { display: flex; flex-direction: column; padding: 15px 0; border-bottom: 0.5px solid #eee; }
         .info-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .name { font-weight: 700; font-size: 15px; }
-        .stock-label { font-size: 13px; color: #007aff; font-weight: 600; }
+        .stock-label { font-size: 13px; color: #007aff; font-weight: 600; background: #eef7ff; padding: 4px 10px; border-radius: 8px; cursor: pointer; border: 1px solid #cce5ff; }
+        .stock-label:active { background: #d0e7ff; }
         .controls { display: flex; justify-content: space-between; align-items: center; }
         .count-display { font-size: 18px; font-weight: 800; color: #000; }
         .btn-group { display: flex; gap: 10px; }
         .btn { width: 45px; height: 45px; border-radius: 12px; border: none; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .minus { background: #e5e5ea; color: #3a3a3c; }
         .plus { background: #000; color: #fff; }
-        .reset-btn { width: 100%; background: #ff3b30; color: white; border: none; border-radius: 12px; height: 50px; margin-top: 10px; font-size: 15px; font-weight: bold; }
-        .done { opacity: 0.3; text-decoration: line-through; }
+        .reset-btn { width: 100%; background: #ff3b30; color: white; border: none; border-radius: 12px; height: 50px; margin-top: 10px; font-size: 14px; font-weight: bold; }
+        .done { opacity: 0.3; }
     </style>
 </head>
 <body>
     <div id="app"></div>
     <script>
-        // 초기 기준 데이터
         const initialData = [
             { id: 'wm', label: '화이트 머쉬룸', target: 19, baseStock: 11 },
             { id: 'wn', label: '화이트 네스트', target: 2, baseStock: 5 },
@@ -35,21 +35,26 @@
             { id: 'bp', label: '블랙 피크', target: 4, baseStock: 0 }
         ];
 
+        function getValue(id, suffix, defaultValue) {
+            const val = localStorage.getItem(id + suffix);
+            return val === null ? defaultValue : parseInt(val);
+        }
+
         function render() {
             let html = '<div class="card"><h2>🤍 화이트 생산 관리</h2>';
             initialData.forEach((item, i) => {
-                const currentProd = parseInt(localStorage.getItem(item.id + '_prod')) ?? item.target;
-                const currentStock = parseInt(localStorage.getItem(item.id + '_stock')) ?? item.baseStock;
+                const currentProd = getValue(item.id, '_prod', item.target);
+                const currentStock = getValue(item.id, '_stock', item.baseStock);
                 const isDone = currentProd <= 0;
                 
                 html += `
                 <div class="row ${isDone ? 'done' : ''}">
                     <div class="info-line">
                         <div class="name">${item.label}</div>
-                        <div class="stock-label">현재재고: ${currentStock}개</div>
+                        <div class="stock-label" onclick="editStock('${item.id}', '${item.label}')">📦 재고: ${currentStock}개 (수정)</div>
                     </div>
                     <div class="controls">
-                        <span class="count-display">${currentProd} <span style="font-size:12px; font-weight:400; color:#8e8e93;">개 더 생산 필요</span></span>
+                        <span class="count-display">${currentProd} <span style="font-size:12px; font-weight:400; color:#8e8e93;">개 남음</span></span>
                         <div class="btn-group">
                             <button class="btn minus" onclick="update('${item.id}', -1)">-</button>
                             <button class="btn plus" onclick="update('${item.id}', 1)">+</button>
@@ -64,19 +69,26 @@
 
         function update(id, delta) {
             const item = initialData.find(d => d.id === id);
-            let currentProd = parseInt(localStorage.getItem(id + '_prod')) ?? item.target;
-            let currentStock = parseInt(localStorage.getItem(id + '_stock')) ?? item.baseStock;
+            let currentProd = getValue(id, '_prod', item.target);
+            let currentStock = getValue(id, '_stock', item.baseStock);
 
-            // 생산을 완료함 (-) -> 생산필요수량 감소, 재고 증가
-            // 생산을 취소함 (+) -> 생산필요수량 증가, 재고 감소
             let newProd = currentProd + delta;
             let newStock = currentStock - delta;
 
-            if (newProd < 0 || newProd > item.target) return; // 범위 제한
+            if (newProd < 0 || newProd > item.target) return;
 
             localStorage.setItem(id + '_prod', newProd);
             localStorage.setItem(id + '_stock', newStock);
             render();
+        }
+
+        function editStock(id, label) {
+            const currentStock = getValue(id, '_stock', 0);
+            const newStock = prompt(`[${label}]의 현재 재고 수량을 입력하세요:`, currentStock);
+            if (newStock !== null && !isNaN(newStock)) {
+                localStorage.setItem(id + '_stock', parseInt(newStock));
+                render();
+            }
         }
 
         function resetData() {
@@ -86,13 +98,6 @@
             }
         }
 
-        // 초기 로컬스토리지 세팅
-        initialData.forEach(item => {
-            if (localStorage.getItem(item.id + '_prod') === null) {
-                localStorage.setItem(item.id + '_prod', item.target);
-                localStorage.setItem(item.id + '_stock', item.baseStock);
-            }
-        });
         render();
     </script>
 </body>
