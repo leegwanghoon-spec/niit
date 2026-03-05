@@ -3,67 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>niit 통합 관리 시스템</title>
+    <title>niit 통합 관리 v3.0</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; padding: 20px; margin: 0; -webkit-user-select: none; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
         h2 { font-size: 18px; margin-top: 0; color: #1c1c1e; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .row { display: flex; flex-direction: column; padding: 15px 0; border-bottom: 0.5px solid #eee; }
-        .info-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .name { font-weight: 700; font-size: 15px; }
-        .stock-label { font-size: 13px; color: #007aff; font-weight: 600; background: #eef7ff; padding: 6px 10px; border-radius: 8px; cursor: pointer; border: 1px solid #cce5ff; }
-        .controls { display: flex; justify-content: space-between; align-items: center; }
-        .count-display { font-size: 16px; font-weight: 800; color: #000; cursor: pointer; background: #fdfdfd; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; display: flex; flex-direction: column; align-items: center; }
-        .count-val { font-size: 20px; color: #ff3b30; }
-        .unit-label { font-size: 11px; font-weight: 500; color: #8e8e93; margin-top: 2px; }
+        .name { font-weight: 700; font-size: 16px; margin-bottom: 12px; }
+        .control-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .label-box { display: flex; flex-direction: column; align-items: center; background: #f8f8f8; padding: 6px 10px; border-radius: 10px; border: 1px solid #ddd; min-width: 85px; cursor: pointer; }
+        .val-text { font-size: 20px; font-weight: 800; color: #000; }
+        .target-val { color: #ff3b30; }
+        .stock-val { color: #007aff; }
+        .unit-text { font-size: 10px; color: #8e8e93; margin-top: 2px; }
         .btn-group { display: flex; gap: 8px; }
-        .btn { width: 48px; height: 48px; border-radius: 12px; border: none; font-size: 22px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn { width: 44px; height: 44px; border-radius: 12px; border: none; font-size: 22px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .minus { background: #e5e5ea; color: #3a3a3c; }
         .plus { background: #000; color: #fff; }
-        .reset-btn { width: 100%; background: #8e8e93; color: white; border: none; border-radius: 12px; height: 45px; margin-top: 10px; font-size: 13px; font-weight: bold; opacity: 0.8; }
+        .reset-btn { width: 100%; background: #ff3b30; color: white; border: none; border-radius: 12px; height: 50px; margin-top: 10px; font-size: 14px; font-weight: bold; }
         .done { opacity: 0.3; }
     </style>
 </head>
 <body>
     <div id="app"></div>
     <script>
+        // 이미지의 현재 상태를 디폴트로 설정
         const initialData = [
-            { id: 'wm', label: '화이트 머쉬룸', target: 19, baseStock: 11 },
-            { id: 'wn', label: '화이트 네스트', target: 2, baseStock: 5 },
-            { id: 'wg', label: '화이트 갓', target: 0, baseStock: 10 },
-            { id: 'wp', label: '화이트 피크', target: 0, baseStock: 10 },
-            { id: 'bm', label: '블랙 머쉬룸', target: 7, baseStock: 0 },
-            { id: 'bg', label: '블랙 갓', target: 8, baseStock: 0 },
-            { id: 'bn', label: '블랙 네스트', target: 1, baseStock: 0 },
-            { id: 'bp', label: '블랙 피크', target: 4, baseStock: 0 }
+            { id: 'wm', label: '화이트 머쉬룸', target: 18, stock: 7 },
+            { id: 'wn', label: '화이트 네스트', target: 2, stock: 4 },
+            { id: 'wg', label: '화이트 갓', target: 0, stock: 10 },
+            { id: 'wp', label: '화이트 피크', target: 0, stock: 10 },
+            { id: 'bm', label: '블랙 머쉬룸', target: 5, stock: 1 },
+            { id: 'bg', label: '블랙 갓', target: 8, stock: 0 },
+            { id: 'bn', label: '블랙 네스트', target: 1, stock: 1 },
+            { id: 'bp', label: '블랙 피크', target: 4, stock: 0 }
         ];
 
-        function getValue(id, suffix, defaultValue) {
-            const val = localStorage.getItem(id + suffix);
-            return val === null ? defaultValue : parseInt(val, 10);
+        function getVal(id, suffix, def) {
+            const v = localStorage.getItem(id + suffix);
+            return v === null ? def : parseInt(v, 10);
         }
 
         function render() {
             let html = '<div class="card"><h2>🤍 화이트 라인</h2>';
             initialData.forEach((item, i) => {
-                const currentProd = getValue(item.id, '_prod', item.target);
-                const currentStock = getValue(item.id, '_stock', item.baseStock);
-                const isDone = item.target > 0 && currentProd <= 0;
+                const p = getVal(item.id, '_p', item.target);
+                const s = getVal(item.id, '_s', item.stock);
+                const isDone = item.target > 0 && p <= 0;
                 
                 html += `
                 <div class="row ${isDone ? 'done' : ''}">
-                    <div class="info-line">
-                        <div class="name">${item.label}</div>
-                        <div class="stock-label" onclick="manualEdit('${item.id}', '_stock', '${item.label} 재고')">📦 재고: ${currentStock}개</div>
-                    </div>
-                    <div class="controls">
-                        <div class="count-display" onclick="manualEdit('${item.id}', '_prod', '${item.label} 목표 생산수량')">
-                            <span class="count-val">${currentProd}</span>
-                            <span class="unit-label">목표 생산수량</span>
+                    <div class="name">${item.label}</div>
+                    
+                    <div class="control-group">
+                        <div class="label-box" onclick="manual('${item.id}', '_s', '${item.label} 재고')">
+                            <span class="val-text stock-val">${s}</span>
+                            <span class="unit-text">현재 재고</span>
                         </div>
                         <div class="btn-group">
-                            <button class="btn minus" onclick="updateCount('${item.id}', -1)">-</button>
-                            <button class="btn plus" onclick="updateCount('${item.id}', 1)">+</button>
+                            <button class="btn minus" onclick="upd('${item.id}', '_s', -1)">-</button>
+                            <button class="btn plus" onclick="upd('${item.id}', '_s', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="label-box" onclick="manual('${item.id}', '_p', '${item.label} 목표 생산')">
+                            <span class="val-text target-val">${p}</span>
+                            <span class="unit-text">목표 생산수량</span>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn minus" onclick="prod('${item.id}', -1)">-</button>
+                            <button class="btn plus" onclick="prod('${item.id}', 1)">+</button>
                         </div>
                     </div>
                 </div>`;
@@ -73,26 +83,28 @@
             document.getElementById('app').innerHTML = html;
         }
 
-        function updateCount(id, delta) {
-            const item = initialData.find(d => d.id === id);
-            let currentProd = getValue(id, '_prod', item.target);
-            let currentStock = getValue(id, '_stock', item.baseStock);
-            
-            let newProd = currentProd + delta;
-            let newStock = currentStock - delta;
-
-            if (newProd < 0) newProd = 0;
-
-            localStorage.setItem(id + '_prod', newProd);
-            localStorage.setItem(id + '_stock', newStock);
+        // 재고 전용 업데이트
+        function upd(id, suffix, delta) {
+            let v = getVal(id, suffix, 0) + delta;
+            if (v < 0) v = 0;
+            localStorage.setItem(id + suffix, v);
             render();
         }
 
-        function manualEdit(id, suffix, title) {
-            const currentVal = getValue(id, suffix, 0);
-            const input = prompt(`[${title}] 수량을 입력하세요:`, currentVal);
-            
-            // 입력값이 있고, 공백이 아니며, 숫자인 경우에만 저장
+        // 생산량 업데이트 (재고와 연동)
+        function prod(id, delta) {
+            const item = initialData.find(d => d.id === id);
+            let p = getVal(id, '_p', item.target) + delta;
+            let s = getVal(id, '_s', item.stock) - delta;
+            if (p < 0) p = 0;
+            localStorage.setItem(id + '_p', p);
+            localStorage.setItem(id + '_s', s);
+            render();
+        }
+
+        function manual(id, suffix, title) {
+            const cur = getVal(id, suffix, 0);
+            const input = prompt(`[${title}] 수량을 입력하세요:`, cur);
             if (input !== null && input.trim() !== "" && !isNaN(input)) {
                 localStorage.setItem(id + suffix, parseInt(input.trim(), 10));
                 render();
@@ -100,7 +112,7 @@
         }
 
         function resetAll() {
-            if (confirm('주의: 모든 생산 목표와 재고 데이터가 초기화됩니다. 계속하시겠습니까?')) {
+            if (confirm('이미지의 초기 상태로 되돌리시겠습니까?')) {
                 localStorage.clear();
                 location.reload();
             }
