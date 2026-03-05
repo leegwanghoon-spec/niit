@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>niit 생산체크</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; padding: 20px; margin: 0; -webkit-user-select: none; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { font-size: 18px; margin-top: 0; color: #1c1c1e; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid #eee; }
+        .name { font-weight: 600; font-size: 16px; }
+        button { width: 55px; height: 55px; border-radius: 12px; border: none; font-size: 20px; background: #000; color: #fff; font-weight: bold; active { opacity: 0.5; } }
+        .reset-btn { width: 100%; background: #ff3b30; margin-top: 20px; height: 45px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script>
+        const data = [
+            { id: 'wm', label: '화이트 머쉬룸', target: 20 },
+            { id: 'wn', label: '화이트 네스트', target: 2 },
+            { id: 'bm', label: '블랙 머쉬룸', target: 7 },
+            { id: 'bg', label: '블랙 갓', target: 8 },
+            { id: 'bn', label: '블랙 네스트', target: 2 },
+            { id: 'bp', label: '블랙 피크', target: 4 }
+        ];
+
+        function render() {
+            let html = '<div class="card"><h2>🤍 화이트 추가생산</h2>';
+            data.forEach((item, i) => {
+                const current = localStorage.getItem(item.id) || item.target;
+                html += `<div class="row"><div class="name">${item.label}</div><button onclick="update('${item.id}', ${current - 1})">${current}</button></div>`;
+                if (i === 1) html += '</div><div class="card"><h2>🖤 블랙 주문전체</h2>';
+            });
+            html += '<button class="reset-btn" onclick="resetData()">전체 수량 초기화</button></div>';
+            document.getElementById('app').innerHTML = html;
+        }
+
+        function update(id, val) {
+            if (val < 0) return;
+            localStorage.setItem(id, val);
+            render();
+        }
+
+        function resetData() {
+            if (confirm('모든 수량을 초기 수치로 되돌릴까요?')) {
+                localStorage.clear();
+                render();
+            }
+        }
+        render();
+    </script>
+</body>
+</html>
