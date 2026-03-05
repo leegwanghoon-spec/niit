@@ -8,27 +8,31 @@
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; padding: 20px; margin: 0; -webkit-user-select: none; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
         h2 { font-size: 18px; margin-top: 0; color: #1c1c1e; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 0.5px solid #eee; }
-        .name { font-weight: 600; font-size: 15px; flex: 1; }
-        .controls { display: flex; align-items: center; gap: 15px; }
-        .count-display { font-size: 16px; font-weight: bold; min-width: 60px; text-align: center; }
-        .btn { width: 40px; height: 40px; border-radius: 10px; border: none; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .row { display: flex; flex-direction: column; padding: 15px 0; border-bottom: 0.5px solid #eee; }
+        .info-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .name { font-weight: 700; font-size: 15px; }
+        .stock-info { font-size: 13px; color: #8e8e93; }
+        .controls { display: flex; justify-content: space-between; align-items: center; }
+        .count-display { font-size: 18px; font-weight: 800; color: #000; }
+        .btn-group { display: flex; gap: 10px; }
+        .btn { width: 45px; height: 45px; border-radius: 12px; border: none; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .minus { background: #e5e5ea; color: #3a3a3c; }
         .plus { background: #000; color: #fff; }
-        .reset-btn { width: 100%; background: #ff3b30; color: white; border: none; border-radius: 10px; height: 45px; margin-top: 10px; font-size: 14px; font-weight: bold; }
-        .done { color: #c7c7cc; text-decoration: line-through; }
+        .reset-btn { width: 100%; background: #ff3b30; color: white; border: none; border-radius: 12px; height: 50px; margin-top: 10px; font-size: 15px; font-weight: bold; }
+        .done { opacity: 0.3; text-decoration: line-through; }
     </style>
 </head>
 <body>
     <div id="app"></div>
     <script>
+        // 초기 수량 설정 (사용자 생산분 반영 완료)
         const data = [
-            { id: 'wm', label: '화이트 머쉬룸', target: 20 },
-            { id: 'wn', label: '화이트 네스트', target: 2 },
-            { id: 'bm', label: '블랙 머쉬룸', target: 7 },
-            { id: 'bg', label: '블랙 갓', target: 8 },
-            { id: 'bn', label: '블랙 네스트', target: 2 },
-            { id: 'bp', label: '블랙 피크', target: 4 }
+            { id: 'wm', label: '화이트 머쉬룸', target: 19, stock: 11 },
+            { id: 'wn', label: '화이트 네스트', target: 2, stock: 5 },
+            { id: 'bm', label: '블랙 머쉬룸', target: 7, stock: 0 },
+            { id: 'bg', label: '블랙 갓', target: 8, stock: 0 },
+            { id: 'bn', label: '블랙 네스트', target: 1, stock: 0 },
+            { id: 'bp', label: '블랙 피크', target: 4, stock: 0 }
         ];
 
         function render() {
@@ -38,12 +42,17 @@
                 const isDone = current <= 0;
                 
                 html += `
-                <div class="row">
-                    <div class="name ${isDone ? 'done' : ''}">${item.label}</div>
+                <div class="row ${isDone ? 'done' : ''}">
+                    <div class="info-line">
+                        <div class="name">${item.label}</div>
+                        <div class="stock-info">현재재고: ${item.stock}개</div>
+                    </div>
                     <div class="controls">
-                        <span class="count-display">${current} / ${item.target}</span>
-                        <button class="btn minus" onclick="update('${item.id}', -1)">-</button>
-                        <button class="btn plus" onclick="update('${item.id}', 1)">+</button>
+                        <span class="count-display">${current} / ${item.target} <span style="font-size:12px; font-weight:400; color:#8e8e93;">남음</span></span>
+                        <div class="btn-group">
+                            <button class="btn minus" onclick="update('${item.id}', -1)">-</button>
+                            <button class="btn plus" onclick="update('${item.id}', 1)">+</button>
+                        </div>
                     </div>
                 </div>`;
                 if (i === 1) html += '</div><div class="card"><h2>🖤 블랙 주문전체</h2>';
@@ -56,28 +65,24 @@
             const item = data.find(d => d.id === id);
             let current = parseInt(localStorage.getItem(id)) ?? item.target;
             let newVal = current + delta;
-            
             if (newVal < 0) newVal = 0;
             if (newVal > item.target) newVal = item.target;
-            
             localStorage.setItem(id, newVal);
             render();
         }
 
         function resetData() {
-            if (confirm('모든 수량을 초기 수치로 되돌릴까요?')) {
+            if (confirm('모든 수량을 금일 생산 목표치로 되돌릴까요?')) {
                 data.forEach(item => localStorage.setItem(item.id, item.target));
                 render();
             }
         }
 
-        // 초기 수치가 저장 안 되어 있을 경우를 대비해 세팅
         data.forEach(item => {
             if (localStorage.getItem(item.id) === null) {
                 localStorage.setItem(item.id, item.target);
             }
         });
-
         render();
     </script>
 </body>
