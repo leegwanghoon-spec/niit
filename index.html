@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>niit 생산체크</title>
+    <title>niit 생산 및 재고 관리</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #f2f2f7; padding: 20px; margin: 0; -webkit-user-select: none; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -11,7 +11,7 @@
         .row { display: flex; flex-direction: column; padding: 15px 0; border-bottom: 0.5px solid #eee; }
         .info-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .name { font-weight: 700; font-size: 15px; }
-        .stock-info { font-size: 13px; color: #8e8e93; }
+        .stock-label { font-size: 13px; color: #007aff; font-weight: 600; }
         .controls { display: flex; justify-content: space-between; align-items: center; }
         .count-display { font-size: 18px; font-weight: 800; color: #000; }
         .btn-group { display: flex; gap: 10px; }
@@ -25,62 +25,72 @@
 <body>
     <div id="app"></div>
     <script>
-        // 초기 수량 설정 (사용자 생산분 반영 완료)
-        const data = [
-            { id: 'wm', label: '화이트 머쉬룸', target: 19, stock: 11 },
-            { id: 'wn', label: '화이트 네스트', target: 2, stock: 5 },
-            { id: 'bm', label: '블랙 머쉬룸', target: 7, stock: 0 },
-            { id: 'bg', label: '블랙 갓', target: 8, stock: 0 },
-            { id: 'bn', label: '블랙 네스트', target: 1, stock: 0 },
-            { id: 'bp', label: '블랙 피크', target: 4, stock: 0 }
+        // 초기 기준 데이터
+        const initialData = [
+            { id: 'wm', label: '화이트 머쉬룸', target: 19, baseStock: 11 },
+            { id: 'wn', label: '화이트 네스트', target: 2, baseStock: 5 },
+            { id: 'bm', label: '블랙 머쉬룸', target: 7, baseStock: 0 },
+            { id: 'bg', label: '블랙 갓', target: 8, baseStock: 0 },
+            { id: 'bn', label: '블랙 네스트', target: 1, baseStock: 0 },
+            { id: 'bp', label: '블랙 피크', target: 4, baseStock: 0 }
         ];
 
         function render() {
-            let html = '<div class="card"><h2>🤍 화이트 추가생산</h2>';
-            data.forEach((item, i) => {
-                const current = parseInt(localStorage.getItem(item.id)) ?? item.target;
-                const isDone = current <= 0;
+            let html = '<div class="card"><h2>🤍 화이트 생산 관리</h2>';
+            initialData.forEach((item, i) => {
+                const currentProd = parseInt(localStorage.getItem(item.id + '_prod')) ?? item.target;
+                const currentStock = parseInt(localStorage.getItem(item.id + '_stock')) ?? item.baseStock;
+                const isDone = currentProd <= 0;
                 
                 html += `
                 <div class="row ${isDone ? 'done' : ''}">
                     <div class="info-line">
                         <div class="name">${item.label}</div>
-                        <div class="stock-info">현재재고: ${item.stock}개</div>
+                        <div class="stock-label">현재재고: ${currentStock}개</div>
                     </div>
                     <div class="controls">
-                        <span class="count-display">${current} / ${item.target} <span style="font-size:12px; font-weight:400; color:#8e8e93;">남음</span></span>
+                        <span class="count-display">${currentProd} <span style="font-size:12px; font-weight:400; color:#8e8e93;">개 더 생산 필요</span></span>
                         <div class="btn-group">
                             <button class="btn minus" onclick="update('${item.id}', -1)">-</button>
                             <button class="btn plus" onclick="update('${item.id}', 1)">+</button>
                         </div>
                     </div>
                 </div>`;
-                if (i === 1) html += '</div><div class="card"><h2>🖤 블랙 주문전체</h2>';
+                if (i === 1) html += '</div><div class="card"><h2>🖤 블랙 생산 관리</h2>';
             });
-            html += '<button class="reset-btn" onclick="resetData()">전체 수량 초기화</button></div>';
+            html += '<button class="reset-btn" onclick="resetData()">전체 데이터 초기화</button></div>';
             document.getElementById('app').innerHTML = html;
         }
 
         function update(id, delta) {
-            const item = data.find(d => d.id === id);
-            let current = parseInt(localStorage.getItem(id)) ?? item.target;
-            let newVal = current + delta;
-            if (newVal < 0) newVal = 0;
-            if (newVal > item.target) newVal = item.target;
-            localStorage.setItem(id, newVal);
+            const item = initialData.find(d => d.id === id);
+            let currentProd = parseInt(localStorage.getItem(id + '_prod')) ?? item.target;
+            let currentStock = parseInt(localStorage.getItem(id + '_stock')) ?? item.baseStock;
+
+            // 생산을 완료함 (-) -> 생산필요수량 감소, 재고 증가
+            // 생산을 취소함 (+) -> 생산필요수량 증가, 재고 감소
+            let newProd = currentProd + delta;
+            let newStock = currentStock - delta;
+
+            if (newProd < 0 || newProd > item.target) return; // 범위 제한
+
+            localStorage.setItem(id + '_prod', newProd);
+            localStorage.setItem(id + '_stock', newStock);
             render();
         }
 
         function resetData() {
-            if (confirm('모든 수량을 금일 생산 목표치로 되돌릴까요?')) {
-                data.forEach(item => localStorage.setItem(item.id, item.target));
-                render();
+            if (confirm('모든 데이터를 초기 목표치와 재고로 되돌릴까요?')) {
+                localStorage.clear();
+                location.reload();
             }
         }
 
-        data.forEach(item => {
-            if (localStorage.getItem(item.id) === null) {
-                localStorage.setItem(item.id, item.target);
+        // 초기 로컬스토리지 세팅
+        initialData.forEach(item => {
+            if (localStorage.getItem(item.id + '_prod') === null) {
+                localStorage.setItem(item.id + '_prod', item.target);
+                localStorage.setItem(item.id + '_stock', item.baseStock);
             }
         });
         render();
